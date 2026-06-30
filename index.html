@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="km">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>សន្ទានុក្រមបច្ចេកសព្ទ ខ្មែរ-អង់គ្លេស</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Khmer:wght@100..900&display=swap" rel="stylesheet">
+
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: "Noto Sans Khmer", Arial, sans-serif;
+      background: #f4f6f8;
+      color: #222;
+    }
+
+    header {
+      background: #1e3a8a;
+      color: white;
+      text-align: center;
+      padding: 35px 20px;
+    }
+
+    header h1 {
+      font-size: 34px;
+      margin-bottom: 8px;
+    }
+
+    main {
+      max-width: 900px;
+      margin: auto;
+      padding: 30px 20px;
+    }
+
+    .search-box {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 25px;
+    }
+
+    input {
+      flex: 1;
+      padding: 15px;
+      font-size: 18px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      outline: none;
+    }
+
+    button {
+      background: #2563eb;
+      color: white;
+      border: none;
+      padding: 15px 22px;
+      font-size: 16px;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+
+    .status {
+      text-align: center;
+      color: #666;
+    }
+
+    .entry {
+      background: white;
+      padding: 22px;
+      border-radius: 10px;
+      margin-bottom: 18px;
+      box-shadow: 0 2px 8px rgba(0,0,0,.08);
+    }
+
+    .english {
+      font-size: 28px;
+      font-weight: bold;
+      color: #111827;
+    }
+
+    .khmer {
+      font-size: 24px;
+      color: #2563eb;
+      margin-top: 5px;
+      margin-bottom: 15px;
+    }
+
+    .field {
+      margin-top: 10px;
+      line-height: 1.7;
+    }
+
+    .label {
+      font-weight: bold;
+    }
+
+    a {
+      color: #2563eb;
+      text-decoration: none;
+    }
+
+    a:hover {
+      text-decoration: underline;
+    }
+
+    footer {
+      text-align: center;
+      color: #777;
+      padding: 30px;
+      font-size: 14px;
+    }
+
+    @media (max-width: 600px) {
+      .search-box {
+        flex-direction: column;
+      }
+
+      header h1 {
+        font-size: 26px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+<header>
+  <h1>សន្ទានុក្រមបច្ចេកសព្ទ ខ្មែរ-អង់គ្លេស</h1>
+  <p>Search English or Khmer words</p>
+</header>
+
+<main>
+  <div class="search-box">
+    <input id="wordInput" type="text" placeholder="Search English or Khmer...">
+    <button onclick="searchWord()">Search</button>
+  </div>
+
+  <div id="result" class="status">Loading dictionary...</div>
+</main>
+
+<footer>
+  © 2026 សន្ទានុក្រមបច្ចេកសព្ទ ខ្មែរ-អង់គ្លេស
+</footer>
+
+<script>
+const url = "https://script.google.com/macros/s/AKfycbw6dD-i7C5fFYsElDYe1xrdf81a6YRjKcdZk2kB-tuKmXNIhlgIc9Uv2UR5ufix9XFq/exec";
+
+let dictionary = [];
+
+function normalizeText(text) {
+  return String(text || "")
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, " ");
+}
+
+function escapeHTML(value) {
+  return String(value || "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+async function loadDictionary() {
+  try {
+    const response = await fetch(url);
+    dictionary = await response.json();
+
+    document.getElementById("result").innerHTML =
+      `<p>Dictionary loaded (${dictionary.length} entries). Start searching.</p>`;
+  } catch (err) {
+    document.getElementById("result").innerHTML =
+      "<p>Unable to load dictionary. Check your Apps Script URL.</p>";
+  }
+}
+
+function searchWord() {
+  const input = normalizeText(document.getElementById("wordInput").value);
+  const output = document.getElementById("result");
+
+  if (!input) {
+    output.innerHTML = "<p>Please enter a word.</p>";
+    return;
+  }
+
+  const results = dictionary.filter(item => {
+    const english = normalizeText(item["Words"]);
+    const khmer = normalizeText(item["ពាក្យ"]);
+    const definition = normalizeText(item["សន្ទានុក្រម"]);
+
+    return (
+      english.includes(input) ||
+      khmer.includes(input) ||
+      definition.includes(input)
+    );
+  });
+
+  if (results.length === 0) {
+    output.innerHTML = "<p>Word not found.</p>";
+    return;
+  }
+
+  output.innerHTML = results.map(showEntry).join("");
+}
+
+function showSuggestions() {
+  const input = normalizeText(document.getElementById("wordInput").value);
+  const output = document.getElementById("result");
+
+  if (!input) {
+    output.innerHTML =
+      `<p>Dictionary loaded (${dictionary.length} entries). Start searching.</p>`;
+    return;
+  }
+
+  const suggestions = dictionary
+    .filter(item => {
+      const english = normalizeText(item["Words"]);
+      const khmer = normalizeText(item["ពាក្យ"]);
+      const definition = normalizeText(item["សន្ទានុក្រម"]);
+
+      return (
+        english.includes(input) ||
+        khmer.includes(input) ||
+        definition.includes(input)
+      );
+    })
+    .slice(0, 10);
+
+  if (suggestions.length === 0) {
+    output.innerHTML = "<p>No suggestions found.</p>";
+    return;
+  }
+
+  output.innerHTML = `
+    <p style="margin-bottom:15px;"><strong>Possible matches:</strong></p>
+    ${suggestions.map(showEntry).join("")}
+  `;
+}
+
+function showEntry(item) {
+  return `
+    <div class="entry">
+      <div class="english">${escapeHTML(item["Words"])}</div>
+      <div class="khmer">${escapeHTML(item["ពាក្យ"])}</div>
+
+      ${field("សន្ទានុក្រម", item["សន្ទានុក្រម"])}
+      ${field("ថ្នាក់ពាក្យ", item["ថ្នាក់ពាក្យ"])}
+      ${field("សទិសន័យ", item["សទិសន័យ"])}
+      ${field("ប្រភព", item["ប្រភព"])}
+      ${field("សម្គាល់", item["សម្គាល់"])}
+      ${field("យោបល់", item["យោបល់"])}
+      ${linkField("អានបន្ថែម", item["អានបន្ថែម"])}
+    </div>
+  `;
+}
+
+function field(label, value) {
+  if (!value) return "";
+
+  return `
+    <div class="field">
+      <span class="label">${escapeHTML(label)}:</span>
+      ${escapeHTML(value)}
+    </div>
+  `;
+}
+
+function linkField(label, value) {
+  if (!value) return "";
+
+  let text = "";
+  let link = "";
+
+  if (typeof value === "object" && value !== null) {
+    text = value.text || "អានបន្ថែម";
+    link = value.url || "";
+  } else {
+    text = value;
+    link = value;
+  }
+
+  if (!link) return "";
+
+  if (!/^https?:\/\//i.test(link)) {
+    link = "https://" + link;
+  }
+
+  return `
+    <div class="field">
+      <span class="label">${escapeHTML(label)}:</span>
+      <a href="${escapeHTML(link)}" target="_blank" rel="noopener noreferrer">
+        ${escapeHTML(text)}
+      </a>
+    </div>
+  `;
+}
+
+document.getElementById("wordInput").addEventListener("input", showSuggestions);
+
+document.getElementById("wordInput").addEventListener("keydown", function(e) {
+  if (e.key === "Enter") {
+    searchWord();
+  }
+});
+
+loadDictionary();
+</script>
+
+</body>
+</html>
