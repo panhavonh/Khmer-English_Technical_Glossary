@@ -39,7 +39,7 @@
     .search-box {
       display: flex;
       gap: 10px;
-      margin-bottom: 25px;
+      margin-bottom: 15px;
     }
 
     input {
@@ -61,9 +61,30 @@
       cursor: pointer;
     }
 
+    .options {
+      margin-bottom: 25px;
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      color: #444;
+    }
+
+    .options input {
+      flex: unset;
+      width: auto;
+    }
+
     .status {
       text-align: center;
       color: #666;
+    }
+
+    .category-title {
+      margin: 28px 0 15px;
+      font-size: 22px;
+      color: #1e3a8a;
+      border-bottom: 2px solid #dbeafe;
+      padding-bottom: 8px;
     }
 
     .entry {
@@ -137,6 +158,11 @@
     <button onclick="searchWord()">Search</button>
   </div>
 
+  <label class="options">
+    <input type="checkbox" id="groupCheck">
+    Group by សន្ទានុក្រម
+  </label>
+
   <div id="result" class="status">Loading dictionary...</div>
 </main>
 
@@ -178,6 +204,45 @@ async function loadDictionary() {
   }
 }
 
+function rankMatch(item, input) {
+  const english = normalizeText(item["Words"]);
+  const khmer = normalizeText(item["ពាក្យ"]);
+  const definition = normalizeText(item["សន្ទានុក្រម"]);
+
+  if (english === input || khmer === input) return 1;
+  if (english.startsWith(input) || khmer.startsWith(input)) return 2;
+  if (english.includes(input) || khmer.includes(input)) return 3;
+  if (definition.includes(input)) return 4;
+
+  return 5;
+}
+
+function getMatches(input) {
+  return dictionary
+    .filter(item => {
+      const english = normalizeText(item["Words"]);
+      const khmer = normalizeText(item["ពាក្យ"]);
+      const definition = normalizeText(item["សន្ទានុក្រម"]);
+
+      return (
+        english.includes(input) ||
+        khmer.includes(input) ||
+        definition.includes(input)
+      );
+    })
+    .sort((a, b) => rankMatch(a, input) - rankMatch(b, input));
+}
+
+function renderResults(items) {
+  const grouped = document.getElementById("groupCheck").checked;
+
+  if (grouped) {
+    return groupByCategory(items);
+  }
+
+  return items.map(showEntry).join("");
+}
+
 function searchWord() {
   const input = normalizeText(document.getElementById("wordInput").value);
   const output = document.getElementById("result");
@@ -187,24 +252,14 @@ function searchWord() {
     return;
   }
 
-  const results = dictionary.filter(item => {
-    const english = normalizeText(item["Words"]);
-    const khmer = normalizeText(item["ពាក្យ"]);
-    const definition = normalizeText(item["សន្ទានុក្រម"]);
-
-    return (
-      english.includes(input) ||
-      khmer.includes(input) ||
-      definition.includes(input)
-    );
-  });
+  const results = getMatches(input);
 
   if (results.length === 0) {
     output.innerHTML = "<p>Word not found.</p>";
     return;
   }
 
-  output.innerHTML = results.map(showEntry).join("");
+  output.innerHTML = renderResults(results);
 }
 
 function showSuggestions() {
@@ -217,19 +272,7 @@ function showSuggestions() {
     return;
   }
 
-  const suggestions = dictionary
-    .filter(item => {
-      const english = normalizeText(item["Words"]);
-      const khmer = normalizeText(item["ពាក្យ"]);
-      const definition = normalizeText(item["សន្ទានុក្រម"]);
-
-      return (
-        english.includes(input) ||
-        khmer.includes(input) ||
-        definition.includes(input)
-      );
-    })
-    .slice(0, 10);
+  const suggestions = getMatches(input);
 
   if (suggestions.length === 0) {
     output.innerHTML = "<p>No suggestions found.</p>";
@@ -237,9 +280,28 @@ function showSuggestions() {
   }
 
   output.innerHTML = `
-    <p style="margin-bottom:15px;"><strong>Possible matches:</strong></p>
-    ${suggestions.map(showEntry).join("")}
+    <p style="margin-bottom:15px;"><strong>Possible matches (${suggestions.length}):</strong></p>
+    ${renderResults(suggestions)}
   `;
+}
+
+function groupByCategory(items) {
+  const groups = {};
+
+  items.forEach(item => {
+    const category = item["សន្ទានុក្រម"] || "ផ្សេងៗ";
+
+    if (!groups[category]) {
+      groups[category] = [];
+    }
+
+    groups[category].push(item);
+  });
+
+  return Object.keys(groups).map(category => `
+    <h2 class="category-title">${escapeHTML(category)}</h2>
+    ${groups[category].map(showEntry).join("")}
+  `).join("");
 }
 
 function showEntry(item) {
@@ -277,7 +339,7 @@ function linkField(label, value) {
   let link = "";
 
   if (typeof value === "object" && value !== null) {
-    text = value.text || "អានបន្ថែម";
+    text = value.text || label;
     link = value.url || "";
   } else {
     text = value;
@@ -306,6 +368,10 @@ document.getElementById("wordInput").addEventListener("keydown", function(e) {
   if (e.key === "Enter") {
     searchWord();
   }
+});
+
+document.getElementById("groupCheck").addEventListener("change", function() {
+  showSuggestions();
 });
 
 loadDictionary();
