@@ -196,8 +196,8 @@ async function loadDictionary() {
     const response = await fetch(url);
     dictionary = await response.json();
 
-    document.getElementById("result").innerHTML =
-      `<p>Dictionary loaded (${dictionary.length} entries). Start searching.</p>`;
+    document.getElementById("result").classList.remove("status");
+    document.getElementById("result").innerHTML = renderResults(dictionary);
   } catch (err) {
     document.getElementById("result").innerHTML =
       "<p>Unable to load dictionary. Check your Apps Script URL.</p>";
@@ -236,6 +236,10 @@ function getMatches(input) {
 function renderResults(items) {
   const grouped = document.getElementById("groupCheck").checked;
 
+  if (!items || items.length === 0) {
+    return "<p>No words found.</p>";
+  }
+
   if (grouped) {
     return groupByCategory(items);
   }
@@ -247,14 +251,17 @@ function searchWord() {
   const input = normalizeText(document.getElementById("wordInput").value);
   const output = document.getElementById("result");
 
+  output.classList.remove("status");
+
   if (!input) {
-    output.innerHTML = "<p>Please enter a word.</p>";
+    output.innerHTML = renderResults(dictionary);
     return;
   }
 
   const results = getMatches(input);
 
   if (results.length === 0) {
+    output.classList.add("status");
     output.innerHTML = "<p>Word not found.</p>";
     return;
   }
@@ -266,23 +273,22 @@ function showSuggestions() {
   const input = normalizeText(document.getElementById("wordInput").value);
   const output = document.getElementById("result");
 
+  output.classList.remove("status");
+
   if (!input) {
-    output.innerHTML =
-      `<p>Dictionary loaded (${dictionary.length} entries). Start searching.</p>`;
+    output.innerHTML = renderResults(dictionary);
     return;
   }
 
   const suggestions = getMatches(input);
 
   if (suggestions.length === 0) {
+    output.classList.add("status");
     output.innerHTML = "<p>No suggestions found.</p>";
     return;
   }
 
-  output.innerHTML = `
-    <p style="margin-bottom:15px;"><strong>Possible matches (${suggestions.length}):</strong></p>
-    ${renderResults(suggestions)}
-  `;
+  output.innerHTML = renderResults(suggestions);
 }
 
 function groupByCategory(items) {
@@ -371,7 +377,13 @@ document.getElementById("wordInput").addEventListener("keydown", function(e) {
 });
 
 document.getElementById("groupCheck").addEventListener("change", function() {
-  showSuggestions();
+  const input = normalizeText(document.getElementById("wordInput").value);
+
+  if (!input) {
+    document.getElementById("result").innerHTML = renderResults(dictionary);
+  } else {
+    showSuggestions();
+  }
 });
 
 loadDictionary();
